@@ -1,13 +1,16 @@
 import React from 'react';
-import { StyleSheet, Text, View, Modal, TouchableHighlight } from 'react-native';
-import MapView from 'react-native-maps';
+import { StyleSheet, Text, View } from 'react-native';
+import MapView, { Polygon, Marker, Callout } from 'react-native-maps';
+import AreaModal from './components/AreaModal';
 // import GeoFencing from 'react-native-geo-fencing';
 
 export default class App extends React.Component {
   constructor(props) {
     super(props);
-
     this.state = {
+      currentUser: {
+
+      },
       currentLocation: {
         latitude: 37.78825,
         longitude: -122.4324,
@@ -16,15 +19,46 @@ export default class App extends React.Component {
       },
       inAnArea: true,
       currentArea: { name: "Northern Quarter" },
-      modalVisible: false,
       areaPlaylists: [
         { name: '' }
+      ],
+      areas: [
+        {
+          coordinates: [
+            { latitude: 53.486196968335136, longitude: -2.2359145558205 },
+            { latitude: 53.481518879521516, longitude: -2.227015072296922 },
+            { latitude: 53.48186415564243, longitude: -2.230208644603522 },
+            { latitude: 53.48157614811416, longitude: -2.231231865247196 },
+            { latitude: 53.480873844102014, longitude: -2.2306954234442173 },
+            { latitude: 53.48029901524724, longitude: -2.2324561665915326 },
+            { latitude: 53.48123373546192, longitude: -2.2334539890289307 },
+            { latitude: 53.482121, longitude: -2.237719 },
+            { latitude: 53.481955, longitude: -2.238277 },
+            { latitude: 53.482223, longitude: -2.239435, },
+            { latitude: 53.484751, longitude: -2.238727 },
+          ],
+          name: 'Northern Quarter',
+          description: 'Hipster place in Manchester',
+          areaColor: 'rgba(219,84,97,0.3)',
+          areaBorderColor: 'rgba(219,84,97,1)'
+        },
+        {
+          coordinates: [
+            { latitude: 53.485695, longitude: -2.239615, },
+            { latitude: 53.486208, longitude: -2.241167, },
+            { latitude: 53.486773, longitude: -2.240859 },
+            { latitude: 53.486248, longitude: -2.239273 },
+          ],
+          name: 'Northcoders',
+          description: 'Hip-happening place full of cool people',
+          areaColor: 'rgba(142,249,243,0.3)',
+          areaBorderColor: 'rgba(142,249,243,1)'
+        }
       ]
     }
   }
 
   componentDidMount() {
-
     this.watchID = navigator.geolocation.watchPosition(
       (position) => {
         console.log(position.coords.latitude, '/', position.coords.longitude)
@@ -45,11 +79,11 @@ export default class App extends React.Component {
         //   lng: position.coords.longitude
         // };
         // const polygon = [
-        //   { lat: 53.475236, lng: -2.217142 },
-        //   { lat: 53.474847, lng: -2.268407 },
-        //   { lat: 53.497412, lng: -2.26648 },
-        //   { lat: 53.499352, lng: -2.213608 },
-        //   { lat: 53.475236, lng: -2.217142 } // last point has to be same as first point
+        //   { latitude: 53.475236, longitude: -2.217142 },
+        //   { latitude: 53.474847, longitude: -2.268407 },
+        //   { latitude: 53.497412, longitude: -2.26648 },
+        //   { latitude: 53.499352, longitude: -2.213608 },
+        //   { latitude: 53.475236, longitude: -2.217142 } // last point has to be same as first point
         // ];
 
         // GeoFencing.containsLocation(point, polygon)
@@ -69,30 +103,8 @@ export default class App extends React.Component {
     }, 20000)
   }
 
-  _isInPolygon = (point, polygon) => {
-
-    let x = point.latitude
-    let y = point.longitude
-
-    let inside = false
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      let xLat = polygon[i].latitude
-      let yLat = polygon[i].longitude
-      let xLon = polygon[j].latitude
-      let yLon = polygon[j].longitude
-
-      let intersect = ((yLat > y) !== (yLon > y)) && (x < (xLon - xLat) * (y - yLat) / (yLon - yLat) + xLat)
-      if (intersect) inside = !inside
-    }
-    return inside
-  }
-
   componentWillUnmount() {
     navigator.geolocation.clearWatch(this.watchID);
-  }
-
-  setModalVisible(visible) {
-    this.setState({ modalVisible: visible });
   }
 
   render() {
@@ -104,47 +116,25 @@ export default class App extends React.Component {
         {this.state.inAnArea ? <Text style={styles.welcomeMsg}>Welcome to {this.state.currentArea.name}</Text> : null}
         <MapView style={styles.map}
           showsUserLocation
-          region={this.state.currentLocation}
-        >
-        </MapView>
-        <View style={{ marginTop: 22 }}>
-          <Modal
-            animationType="slide"
-            transparent={false}
-            visible={this.state.modalVisible}
-            onRequestClose={() => {
-              Alert.alert('Modal has been closed.');
-            }}
-          >
-            <View style={{ marginTop: 22 }} style={styles.modal}>
-              <View>
-                <Text style={styles.modalTitle}>
-                  {this.state.currentArea.name}
-                </Text>
-              </View>
-              <View >
-                <Text style={styles.modalDismiss}>
-                  {this.state.currentLocation.latitude}/{this.state.currentLocation.longitude}
-                </Text>
-              </View>
-              <View >
-                <TouchableHighlight
-                  onPress={() => {
-                    this.setModalVisible(!this.state.modalVisible);
-                  }}>
-                  <Text style={styles.modalDismiss}>Hide Modal</Text>
-                </TouchableHighlight>
-              </View>
+          region={this.state.currentLocation} >
+          {this.state.areas.map((area, i) => {
+            return <View key={i}>
+              <Polygon
+                coordinates={area.coordinates}
+                fillColor={area.areaColor}
+                strokeWidth={2}
+                strokeColor='#171738'
+              />
+              <Marker coordinate={area.coordinates[0]} pinColor='#171738'>
+                <Callout style={styles.areaCallout}>
+                  <Text style={styles.areaCalloutName}>{area.name}</Text>
+                  <Text style={styles.areaCalloutDescription}>{area.description}</Text>
+                </Callout>
+              </Marker>
             </View>
-          </Modal>
-
-          <TouchableHighlight
-            onPress={() => {
-              this.setModalVisible(true);
-            }}>
-            <Text style={styles.modalMsg}>See Playlists in {this.state.currentArea.name}</Text>
-          </TouchableHighlight>
-        </View>
+          })}
+        </MapView>
+        <AreaModal currentLocation={this.state.currentLocation} currentArea={this.state.currentArea} />
       </View>
     );
   }
@@ -164,26 +154,21 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 5,
     fontSize: 20,
-    color: 'white'
+    color: 'white',
   },
   welcomeMsg: {
     color: 'white'
   },
-  modalMsg: {
-    color: 'white'
-  },
-  modal: {
+  areaCallout: {
     flex: 1,
-    backgroundColor: '#171738',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'center',
   },
-  modalTitle: {
-    color: 'white',
-    fontSize: 30
+  areaCalloutDescription: {
+    margin: 5
   },
-  modalDismiss: {
-    color: 'white',
-    marginBottom: 20,
+  areaCalloutName: {
+    fontSize: 17,
+    marginBottom: 3
   }
 });
